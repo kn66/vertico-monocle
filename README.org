@@ -1,0 +1,129 @@
+#+TITLE: vertico-monocle
+#+OPTIONS: toc:2 num:nil
+
+* vertico-monocle
+
+~vertico-monocle~ displays Vertico's completion buffer
+(~vertico-buffer-mode~) as a *single full-frame window* ("monocle"), and
+reveals a second pane only while Consult is previewing a candidate.  It uses
+ordinary Emacs windows, not child frames.
+
+True to the name "monocle" (a single lens), the candidate window normally
+*keeps the window count down to one*, and a second window appears only when a
+preview actually needs it.
+
+** Behavior
+
+| State                   | Layout                                              |
+|-------------------------+-----------------------------------------------------|
+| No Consult preview      | Candidate window fills the frame (one window)        |
+| Consult previewing      | Frame splits into candidates and preview (two panes) |
+
+- Ordinary minibuffer sessions without a preview (~M-x~, ~find-file~, ...)
+  always stay full-frame; no leftover sliver remains.
+- Recursive minibuffers (e.g. ~consult-dir~ invoked from ~find-file~) reuse
+  the outer Vertico window instead of splitting beside it, so the recursion
+  also stays in one window.  The outer candidates are restored automatically
+  when the inner session exits.
+- Other-window / other-frame / other-tab commands such as
+  ~consult-buffer-other-window~ (~C-x 4 b~) split or pop a window on their own.
+  To avoid a double split, this mode suppresses its own split and lets the
+  window created by Consult act as the preview pane (candidates + preview).
+  The final window configuration follows Consult's native behavior.
+
+** How it works
+
+~vertico-buffer-mode~ renders the candidates in a real window.  This mode
+installs a ~vertico-buffer-display-action~ that makes that window fill the
+frame, reusing an existing Vertico window for recursive minibuffers so the
+recursion also stays in one window.
+
+Consult previews into the window returned by ~consult--original-window~.  This
+mode advises that function: while a Vertico minibuffer is active and Consult
+would preview in the same window, it lazily splits the candidate window and
+returns the new window, so Consult draws its preview there.  When preview stops
+(a ~preview~ action with a nil candidate) or the minibuffer exits, that window
+is deleted and the candidate window expands back to the full frame.
+
+Because the preview window is created on demand and deleted when unused,
+non-preview sessions never split and the candidate window stays truly
+full-frame.
+
+** Requirements
+
+- Emacs 29.1 or later
+- [[https://github.com/minad/vertico][vertico]] 2.8 or later (includes ~vertico-buffer~)
+- [[https://github.com/minad/consult][consult]] for the side-by-side preview (optional; the full-frame behavior
+  works without it)
+
+** Installation
+
+Load from a local path (~use-package~ with ~:load-path~):
+
+#+begin_src emacs-lisp
+  (use-package vertico-monocle
+    :load-path "~/.emacs.d/lisp/vertico-monocle/"
+    :after vertico
+    :demand t
+    :config
+    (vertico-monocle-mode))
+#+end_src
+
+Fetch from a Git repository (~:vc~):
+
+#+begin_src emacs-lisp
+  (use-package vertico-monocle
+    :vc (:url "https://github.com/kn66/vertico-monocle.git" :rev :newest)
+    :after vertico
+    :demand t
+    :config
+    (vertico-monocle-mode))
+#+end_src
+
+~vertico-monocle-mode~ enables ~vertico-buffer-mode~ automatically.
+
+** Customization
+
+| Variable                         | Default                              | Description                                                    |
+|----------------------------------+--------------------------------------+----------------------------------------------------------------|
+| ~vertico-monocle-side~           | ~right~                              | Side to create the preview window on (~right~/~left~/~above~/~below~) |
+| ~vertico-monocle-display-action~ | ~(vertico-monocle--display-buffer)~  | Display action installed into ~vertico-buffer-display-action~  |
+
+Example: show the preview below the candidates.
+
+#+begin_src emacs-lisp
+  (setopt vertico-monocle-side 'below)
+#+end_src
+
+** Known limitations
+
+- This package integrates with Vertico and Consult through internal APIs such
+  as Consult's preview entry points and Vertico's candidate overlay.  It is
+  tested against the versions listed above, but upstream internal changes may
+  require updates.
+- For Consult commands whose preview is deferred behind a key (e.g. some
+  ~consult-ripgrep~ setups), the preview window is created at preview setup
+  time and may briefly show the original buffer until you trigger a preview.
+  Immediate-preview commands (~consult-line~, ~consult-buffer~,
+  ~consult-imenu~, ...) behave as intended.
+- Recursive minibuffers that run simultaneous Consult previews are out of
+  scope.
+
+** Relation to vertico-buffer-frame
+
+Do *not* enable [[https://github.com/kn66/vertico-buffer-frame][vertico-buffer-frame]] at the same time.  Both advise Consult's
+preview path and manage the candidate display, so they conflict.  Enable only
+one:
+
+- Overlay candidates and preview in child frames -> ~vertico-buffer-frame~
+- Keep a full-frame single window in ordinary windows, splitting only when a
+  preview is needed -> ~vertico-monocle~
+
+** License
+
+GPL-3.0-or-later.  See the license headers in =vertico-monocle.el=.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
