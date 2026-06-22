@@ -83,9 +83,12 @@ Vertico window for recursive minibuffers; the Consult preview window is split
 off on demand."
   :type 'sexp)
 
-(defcustom vertico-monocle-side 'right
-  "Side of the candidate window on which the preview window is created."
-  :type '(choice (const right) (const left)
+(defcustom vertico-monocle-side 'auto
+  "Side of the candidate window on which the preview window is created.
+When set to `auto', create the preview below candidates on portrait frames,
+and to the right of candidates otherwise."
+  :type '(choice (const auto)
+                 (const right) (const left)
                  (const above) (const below)))
 
 (declare-function consult--original-window "consult")
@@ -153,6 +156,14 @@ stays in one window instead of splitting; otherwise fall back to
            (let ((win (overlay-get vertico--candidates-ov 'window)))
              (and (window-live-p win) win))))))
 
+(defun vertico-monocle--preview-side ()
+  "Return the effective side for the preview window."
+  (if (eq vertico-monocle-side 'auto)
+      (if (> (frame-pixel-height) (frame-pixel-width))
+          'below
+        'right)
+    vertico-monocle-side))
+
 (defun vertico-monocle--ensure-preview-window ()
   "Return the preview window, splitting the candidate window if needed."
   (or (and (window-live-p vertico-monocle--preview-window)
@@ -160,7 +171,7 @@ stays in one window instead of splitting; otherwise fall back to
       (when-let* ((vw (vertico-monocle--candidate-window)))
         (setq vertico-monocle--preview-window
               (ignore-errors
-                (split-window vw nil vertico-monocle-side))))))
+                (split-window vw nil (vertico-monocle--preview-side)))))))
 
 (defun vertico-monocle--delete-preview-window ()
   "Delete the preview window so the candidate window fills the frame again."

@@ -7,6 +7,7 @@
 ;;; Code:
 
 (require 'ert)
+(require 'cl-lib)
 (require 'vertico-monocle)
 
 (ert-deftest vertico-monocle-restores-disabled-vertico-buffer-state ()
@@ -61,6 +62,21 @@
         (should-not (advice-member-p #'vertico-monocle--with-preview-f
                                      'consult--with-preview-f)))
     (vertico-monocle-mode -1)))
+
+(ert-deftest vertico-monocle-auto-preview-side-follows-frame-shape ()
+  "The automatic preview side uses top/bottom splitting on portrait frames."
+  (let ((vertico-monocle-side 'auto))
+    (cl-letf (((symbol-function 'frame-pixel-width) (lambda (&optional _frame) 1200))
+              ((symbol-function 'frame-pixel-height) (lambda (&optional _frame) 800)))
+      (should (eq (vertico-monocle--preview-side) 'right)))
+    (cl-letf (((symbol-function 'frame-pixel-width) (lambda (&optional _frame) 800))
+              ((symbol-function 'frame-pixel-height) (lambda (&optional _frame) 1200)))
+      (should (eq (vertico-monocle--preview-side) 'below)))))
+
+(ert-deftest vertico-monocle-explicit-preview-side-overrides-auto ()
+  "An explicit preview side is used unchanged."
+  (let ((vertico-monocle-side 'left))
+    (should (eq (vertico-monocle--preview-side) 'left))))
 
 (provide 'vertico-monocle-tests)
 ;;; vertico-monocle-tests.el ends here

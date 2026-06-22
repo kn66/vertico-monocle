@@ -86,10 +86,13 @@ Fetch from a Git repository (~:vc~):
 
 | Variable                         | Default                              | Description                                                    |
 |----------------------------------+--------------------------------------+----------------------------------------------------------------|
-| ~vertico-monocle-side~           | ~right~                              | Side to create the preview window on (~right~/~left~/~above~/~below~) |
+| ~vertico-monocle-side~           | ~auto~                               | Side to create the preview window on (~auto~/~right~/~left~/~above~/~below~) |
 | ~vertico-monocle-display-action~ | ~(vertico-monocle--display-buffer)~  | Display action installed into ~vertico-buffer-display-action~  |
 
-Example: show the preview below the candidates.
+By default, ~auto~ shows the preview to the right on landscape frames and below
+the candidates on portrait frames.
+
+Example: always show the preview below the candidates.
 
 #+begin_src emacs-lisp
   (setopt vertico-monocle-side 'below)
